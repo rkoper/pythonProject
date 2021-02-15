@@ -88,19 +88,18 @@ d_2015_2 = d_2015_1.loc[d_2015['_merge'] != 'right_only']
 d_2015_3 = pd.merge(d_15_f1, d_2015_2, on=["OSEBuildingID", "OSEBuildingID"])
 
 
-
-
-
 data = d_2015_3.append(d_16_f1)
 data01 = data.sort_values(by=['OSEBuildingID'], ascending=True)
 data02 = data01.reset_index()
 data02.drop('index', inplace=True, axis=1)
 data02.drop('_merge', inplace=True, axis=1)
 data02.drop(0, inplace=True, axis=1)
-print("Compare v1--------", data02.loc[[48]].to_string())
-print("Compare v2--------", data02.loc[[49]].to_string())
-
-print("shape v1--------", data02.shape)
-
+data02.replace(0, np.nan, inplace=True)
 data03 = FilterOne(data02, 3432)
-print("shape v2--------", data03.shape)
+print(data03.head(1).to_string())
+
+data03_ = data03["ListOfAllPropertyUseTypes"].str.split(",", n=1, expand=True)
+data03['ListOfAllPropertyUseTypes'] = data03_[0]
+data03.drop('ListOfAllPropertyUseTypes', inplace=True, axis=1)
+data03.drop('LargestPropertyUseType', inplace=True, axis=1)
+print(data03.shape)
