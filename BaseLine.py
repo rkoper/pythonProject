@@ -96,54 +96,74 @@ data03 = FilterOne(data02, 3432)
 data03_ = data03["ListOfAllPropertyUseTypes"].str.split(",", n=1, expand=True)
 data03['ListOfAllPropertyUseTypes'] = data03_[0]
 data03.drop('ListOfAllPropertyUseTypes', inplace=True, axis=1)
+data03.drop('OSEBuildingID', inplace=True, axis=1)
+data03.drop('DataYear', inplace=True, axis=1)
+data03.drop('Address', inplace=True, axis=1)
+data03.drop('City', inplace=True, axis=1)
+data03.drop('BuildingType', inplace=True, axis=1)
+data03.drop('PrimaryPropertyType', inplace=True, axis=1)
+data03.drop('PropertyName', inplace=True, axis=1)
+data03.drop('TaxParcelIdentificationNumber', inplace=True, axis=1)
+data03.drop('Neighborhood', inplace=True, axis=1)
+
 data03.drop('LargestPropertyUseType', inplace=True, axis=1)
+data03.drop('ComplianceStatus', inplace=True, axis=1)
 
-print("data03  ------->", data03.head(2).to_string())
+data03.drop('State', inplace=True, axis=1)
+data03.drop('GHGEmissionsIntensity', inplace=True, axis=1)
+print("data03 Shape------" , data03.shape)
 
-data_CO2_emi = data03['TotalGHGEmissions']
+data04 = data03.dropna()
 
-data_elect_X1 = data03['SiteEnergyUse(kBtu)']
-data_elect_X2 = data03['SiteEnergyUseWN(kBtu)']
-data_elect_X3 = data03['Electricity(kWh)']
-data_elect_X4 = data03['Electricity(kBtu)']
+print("data04 Shape------" , data04.shape)
 
-data_CO2_emission = data_CO2_emi.fillna(0)
-data_elect_1 = data_elect_X1.fillna(0)
-data_elect_2 = data_elect_X2.fillna(0)
-data_elect_3 = data_elect_X3.fillna(0)
-data_elect_4 = data_elect_X4.fillna(0)
 
-data_CO2_emission = data_CO2_emi.fillna(0)
 
-data_elect_1 = data_elect_X1.fillna(0)
-data_elect_12 = pd.DataFrame(data_elect_1)
-data_elect_12.rename(columns={1: 'a'})
+X_train = data04.iloc[:1000,1:21]
+y_train = data04.iloc[:1000,-1]
+X_test = data04.iloc[450:,1:21]
+y_test = data04.iloc[450:,-1]
 
-data_elect_2 = data_elect_X2.fillna(0)
-data_elect_3 = data_elect_X3.fillna(0)
-data_elect_4 = data_elect_X4.fillna(0)
+from sklearn import linear_model
 
-print("data_CO2_emission  ------->", data_CO2_emission.describe())
-print("data_elect_1  ------->", data_elect_1.describe())
-print("data_elect_2  ------->", data_elect_2.describe())
-print("data_elect_3  ------->", data_elect_3.describe())
-print("data_elect_4  ------->", data_elect_4.describe())
+lr = linear_model.LinearRegression()
+lr.fit(X_train,y_train)
 
-print("NB Zero  ------->", data03.astype(bool).sum(axis=0))
-print("Shape data03  ------->", data03.shape)
+baseline_error = np.mean((lr.predict(X_test) - y_test) ** 2)
 
-data_elect_13 = data_elect_12.sort_values(by=['SiteEnergyUse(kBtu)'], ascending=True)
-print("data_elect_13 data_elect_13   ------->", data_elect_13.head(50))
-# GRAPH ----
+print("baseline_error----------" , baseline_error)
 
-test01 = data03[
-    ["SourceEUI(kBtu/sf)", "SourceEUIWN(kBtu/sf)", "SiteEnergyUse(kBtu)", "SiteEnergyUseWN(kBtu)", "Electricity(kWh)",
-     "Electricity(kBtu)"]]
+n_alphas = 200
+alphas = np.logspace(-5, 5, n_alphas)
+from sklearn.linear_model import Ridge
+ridge = linear_model.Ridge(normalize=True)
 
-corr = test01.astype('float64').corr()
-corr
+coefs = []
+errors = []
+for a in alphas:
+    ridge.set_params(alpha=a)
+    ridge.fit(X_train, y_train)
+    coefs.append(ridge.coef_)
+    errors.append([baseline_error, np.mean((ridge.predict(X_test) - y_test) ** 2)])
 
-plt.figure(figsize=(15, 10))
-sns.heatmap(corr, annot=True)
-plt.title("Schema 56 - HeatMap : Etudes de Correlation / 1", fontsize=15)
-plt.show()
+import matplotlib.pyplot as plt
+'''
+ax = plt.gca()
+ax.plot(alphas, coefs)
+ax.set_xscale('log')
+plt.xlabel('alpha')
+plt.ylabel('weights')
+plt.title('Ridge coefficients as a function of the regularization')
+plt.axis('tight')
+print(plt.show())
+
+
+ax = plt.gca()
+ax.plot(alphas, errors)
+ax.set_xscale('log')
+plt.xlabel('alpha')
+plt.ylabel('error')
+plt.axis('tight')
+print(plt.show())
+'''
+print("errors min -------" , min(errors))

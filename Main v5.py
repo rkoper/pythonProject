@@ -1,10 +1,16 @@
-import pandas as pd
+import time
 import matplotlib
 import numpy as np
+import pandas as pd
 import seaborn as sns
 from tqdm import tqdm
-import time
 
+import matplotlib.pyplot as plt
+from sklearn import preprocessing
+from sklearn.model_selection import train_test_split
+from sklearn import linear_model
+
+sns.set(rc={'figure.figsize': (15, 15)})
 for i in tqdm(range(5)):
     time.sleep(1)
 
@@ -98,52 +104,53 @@ data03['ListOfAllPropertyUseTypes'] = data03_[0]
 data03.drop('ListOfAllPropertyUseTypes', inplace=True, axis=1)
 data03.drop('LargestPropertyUseType', inplace=True, axis=1)
 
-print("data03  ------->", data03.head(2).to_string())
+data04 = data03.fillna(0)
+data05 = data04[["NaturalGas(kBtu)","Electricity(kBtu)","SiteEnergyUse(kBtu)","LargestPropertyUseTypeGFA","TotalGHGEmissions"]]
+X = data05.iloc[:,0:4]
+y = data05.iloc[:,4]
 
-data_CO2_emi = data03['TotalGHGEmissions']
+print("X.shape-----", X.head(3))
+print("X.shape------", y.head(3))
 
-data_elect_X1 = data03['SiteEnergyUse(kBtu)']
-data_elect_X2 = data03['SiteEnergyUseWN(kBtu)']
-data_elect_X3 = data03['Electricity(kWh)']
-data_elect_X4 = data03['Electricity(kBtu)']
 
-data_CO2_emission = data_CO2_emi.fillna(0)
-data_elect_1 = data_elect_X1.fillna(0)
-data_elect_2 = data_elect_X2.fillna(0)
-data_elect_3 = data_elect_X3.fillna(0)
-data_elect_4 = data_elect_X4.fillna(0)
 
-data_CO2_emission = data_CO2_emi.fillna(0)
 
-data_elect_1 = data_elect_X1.fillna(0)
-data_elect_12 = pd.DataFrame(data_elect_1)
-data_elect_12.rename(columns={1: 'a'})
+std_scale = preprocessing.StandardScaler().fit(X)
+X_scale = std_scale.transform(X)
 
-data_elect_2 = data_elect_X2.fillna(0)
-data_elect_3 = data_elect_X3.fillna(0)
-data_elect_4 = data_elect_X4.fillna(0)
 
-print("data_CO2_emission  ------->", data_CO2_emission.describe())
-print("data_elect_1  ------->", data_elect_1.describe())
-print("data_elect_2  ------->", data_elect_2.describe())
-print("data_elect_3  ------->", data_elect_3.describe())
-print("data_elect_4  ------->", data_elect_4.describe())
+X_train, X_test, y_train, y_test = train_test_split(X_scale,y , test_size = 0.33)
 
-print("NB Zero  ------->", data03.astype(bool).sum(axis=0))
-print("Shape data03  ------->", data03.shape)
+lr = linear_model.LinearRegression()
 
-data_elect_13 = data_elect_12.sort_values(by=['SiteEnergyUse(kBtu)'], ascending=True)
-print("data_elect_13 data_elect_13   ------->", data_elect_13.head(50))
-# GRAPH ----
+lr.fit(X_train, y_train)
 
-test01 = data03[
-    ["SourceEUI(kBtu/sf)", "SourceEUIWN(kBtu/sf)", "SiteEnergyUse(kBtu)", "SiteEnergyUseWN(kBtu)", "Electricity(kWh)",
-     "Electricity(kBtu)"]]
+# On récupère l'erreur de norme 2 sur le jeu de données test comme baseline
+baseline_error = np.mean((lr.predict(X_test) - y_test) ** 2)
 
-corr = test01.astype('float64').corr()
-corr
+print("baseline_error......." , baseline_error)
 
-plt.figure(figsize=(15, 10))
-sns.heatmap(corr, annot=True)
-plt.title("Schema 56 - HeatMap : Etudes de Correlation / 1", fontsize=15)
+n_alphas = 10
+alphas = np.logspace(-10, 10, n_alphas)
+from sklearn.linear_model import Ridge
+
+ridge = linear_model.Ridge()
+
+coefs = []
+errors = []
+for a in alphas:
+    ridge.set_params(alpha=a)
+    ridge.fit(X_train, y_train)
+    coefs.append(ridge.coef_)
+    errors.append([baseline_error, np.mean((ridge.predict(X_test) - y_test) ** 2)])
+
+ax = plt.gca()
+ax.plot(alphas, errors, baseline_error )
+ax.set_xscale('log')
+plt.xlabel('alpha')
+plt.ylabel('weights')
+plt.title('Ridge coefficients as a function of the regularization')
+plt.axis('tight')
 plt.show()
+
+print(np.argmin(errors))
