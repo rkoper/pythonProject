@@ -344,7 +344,6 @@ neighborhood_bin_train["NeighborhoodBin"] = train_df_munged["NeighborhoodBin"]
 neighborhood_bin_test = pd.DataFrame(index = test_df.index)
 neighborhood_bin_test["NeighborhoodBin"] = test_df_munged["NeighborhoodBin"]
 
-################################################################################
 
 numeric_features = train_df_munged.dtypes[train_df_munged.dtypes != "object"].index
 
