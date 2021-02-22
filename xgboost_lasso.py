@@ -354,7 +354,6 @@ from scipy.stats import skew
 
 skewed = train_df_munged[numeric_features].apply(lambda x: skew(x.dropna().astype(float)))
 skewed = skewed[skewed > 0.75]
-skewed = skewed.index
 
 train_df_munged[skewed] = np.log1p(train_df_munged[skewed])
 test_df_munged[skewed] = np.log1p(test_df_munged[skewed])
